@@ -2,6 +2,33 @@
 
 自动检测并管理电脑上的所有AI组件。
 
+## 快速下载使用
+
+### 方法一：下载压缩包（推荐）
+
+1. **下载** [ai-manager.zip](ai-manager.zip)
+2. **解压** 到桌面任意位置
+3. **安装依赖**：打开文件夹，按住 `Shift` + 右键空白处 → 选择「在此处打开 Powershell 窗口」，输入：
+   ```powershell
+   npm install
+   ```
+4. **启动**：
+   ```powershell
+   npm start
+   ```
+5. **打开浏览器** 访问 http://localhost:3000
+
+### 方法二：使用 start.bat
+
+解压后直接双击 `start.bat` 即可启动（需要已安装 Node.js）。
+
+---
+
+## 前置要求
+
+- [Node.js](https://nodejs.org/) 14+（下载LTS版本）
+- Windows 10/11
+
 ## 功能特性
 
 ### 🔍 AI检测
