@@ -31,30 +31,31 @@
 
 ## 功能特性
 
-### 🔍 AI检测
-- **AI服务检测**: 自动检测Ollama、LM Studio、LocalAI等AI服务
-- **AI模型扫描**: 扫描本地AI模型文件（.gguf、.pt、.onnx等）
-- **AI应用检测**: 检测已安装的AI桌面应用
-- **AI进程监控**: 实时监控AI相关进程
+### 🔍 支持检测的AI工具
 
-### 📊 管理功能
-- **服务管理**: 启动/停止AI服务
-- **进程管理**: 终止AI进程
-- **资源监控**: CPU、内存、GPU使用率
-- **Web控制面板**: 可视化管理界面
+#### AI编程助手
+- **Cursor** - AI代码编辑器
+- **Windsurf** - AI代码编辑器
+- **Claude Code** - Anthropic命令行AI
+- **GitHub Copilot** - AI编程助手
+- **Aider** - AI编程命令行工具
 
-### 🎯 支持的AI组件
+#### AI对话/助手
+- **Claude Desktop** - Anthropic桌面应用
+- **ChatGPT Desktop** - OpenAI桌面应用
 
-#### AI服务
-- Ollama
-- LM Studio
-- LocalAI
-- llama.cpp
-- text-generation-webui
-- Stable Diffusion WebUI
-- ComfyUI
-- GPT4All
-- Jan
+#### AI本地模型工具
+- **Ollama** - 本地大模型运行
+- **LM Studio** - 本地大模型GUI
+- **GPT4All** - 本地AI助手
+- **Jan** - 本地AI运行时
+- **Pinokio** - AI应用管理器
+
+#### 图像生成
+- **Stable Diffusion WebUI**
+- **ComfyUI**
+- **Fooocus**
+- **InvokeAI**
 
 #### AI模型格式
 - GGUF (llama.cpp)
@@ -64,23 +65,11 @@
 - TensorFlow (.pb/.h5)
 - LoRA/QLoRA
 
-#### AI应用
-- ChatGPT Desktop
-- Claude Desktop
-- LM Studio
-- GPT4All
-- Jan
-- Stable Diffusion WebUI
-- ComfyUI
-- Fooocus
-- InvokeAI
-
-## 安装
-
-```bash
-cd ai-manager
-npm install
-```
+### 📊 管理功能
+- **服务检测**: 自动检测运行中的AI服务端口
+- **进程管理**: 查看和终止AI进程
+- **资源监控**: CPU、内存、GPU使用率
+- **Web控制面板**: 可视化管理界面
 
 ## 使用方法
 
@@ -94,11 +83,6 @@ npm start
 ### 仅运行扫描
 ```bash
 npm run scan
-```
-
-### 开发模式
-```bash
-npm run serve
 ```
 
 ## API接口

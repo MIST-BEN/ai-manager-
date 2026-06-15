@@ -5,11 +5,20 @@ const execAsync = promisify(exec);
 class ProcessManager {
   constructor() {
     this.aiProcesses = [];
-    this.keywords = [
-      'ollama', 'llama', 'gpt', 'chatgpt', 'claude', 'ai',
-      'stable-diffusion', 'comfyui', 'diffusion', 'torch',
-      'tensorflow', 'pytorch', 'onnx', 'cuda', 'gpu',
-      'inference', 'model', 'lora', 'gguf', 'ggml'
+    // 精确匹配的AI进程名（不含NVIDIA等驱动进程）
+    this.processPatterns = [
+      // AI聊天/助手
+      'ollama', 'chatgpt', 'claude', 'copilot',
+      // AI编程工具
+      'cursor', 'windsurf', 'continue', 'aider',
+      // LLM运行时
+      'llama', 'gguf', 'gpt4all', 'lm.studio', 'jan',
+      // 图像生成
+      'stable-diffusion', 'comfyui', 'fooocus', 'invokeai', 'automatic1111',
+      // 其他AI工具
+      'pinokio', 'text-generation', 'kobold', 'siliconflow',
+      // AI命令行工具
+      'claude.exe', 'openai', 'anthropic'
     ];
   }
 
@@ -17,7 +26,6 @@ class ProcessManager {
     this.aiProcesses = [];
 
     try {
-      // Get all running processes
       const { stdout } = await execAsync('tasklist /FO CSV /NH');
       const lines = stdout.split('\n').filter(line => line.trim());
 
@@ -27,18 +35,19 @@ class ProcessManager {
           const processName = parts[0].toLowerCase();
           const pid = parseInt(parts[1]);
 
-          // Check if this is an AI-related process
           if (this.isAIProcess(processName)) {
             const details = await this.getProcessDetails(pid);
-            this.aiProcesses.push({
-              name: parts[0],
-              pid: pid,
-              memory: parts[4] || 'N/A',
-              cpu: parts[5] || 'N/A',
-              status: parts[2] || 'N/A',
-              ...details,
-              type: this.getProcessType(processName)
-            });
+            // 过滤掉NVIDIA驱动进程
+            if (!this.isNvidiaDriverProcess(details, processName)) {
+              this.aiProcesses.push({
+                name: parts[0],
+                pid: pid,
+                memory: parts[4] || 'N/A',
+                status: parts[2] || 'N/A',
+                ...details,
+                type: this.getProcessType(processName, details)
+              });
+            }
           }
         }
       }
@@ -50,30 +59,47 @@ class ProcessManager {
   }
 
   isAIProcess(name) {
-    return this.keywords.some(keyword => name.includes(keyword));
+    return this.processPatterns.some(p => name.includes(p));
   }
 
-  getProcessType(name) {
-    const types = {
-      'ollama': 'AI Server',
-      'llama': 'LLM Runtime',
-      'gpt': 'AI Application',
-      'chatgpt': 'AI Application',
-      'claude': 'AI Application',
-      'stable-diffusion': 'Image Generation',
-      'comfyui': 'Image Generation',
-      'torch': 'ML Framework',
-      'tensorflow': 'ML Framework',
-      'cuda': 'GPU Computing',
-      'inference': 'AI Inference'
-    };
+  isNvidiaDriverProcess(details, name) {
+    const nvidiaProcesses = [
+      'nvidia', 'nvcontainer', 'nvtray', 'nvsphelper',
+      'nvdisplay', 'container', 'session'
+    ];
+    const path = (details.executablePath || '').toLowerCase();
+    const cmd = (details.commandLine || '').toLowerCase();
 
-    for (const [key, type] of Object.entries(types)) {
-      if (name.includes(key)) {
-        return type;
-      }
+    if (path.includes('nvidia') || cmd.includes('nvidia')) {
+      return true;
     }
-    return 'AI Related';
+    if (name.includes('nvcontainer') || name.includes('nvsphelper')) {
+      return true;
+    }
+    return false;
+  }
+
+  getProcessType(name, details) {
+    const cmd = ((details && details.commandLine) || '').toLowerCase();
+    const path = ((details && details.executablePath) || '').toLowerCase();
+
+    if (name.includes('ollama')) return 'AI Server (Ollama)';
+    if (name.includes('claude')) return 'AI Assistant (Claude)';
+    if (name.includes('chatgpt')) return 'AI Assistant (ChatGPT)';
+    if (name.includes('copilot')) return 'AI Assistant (Copilot)';
+    if (name.includes('cursor')) return 'AI IDE (Cursor)';
+    if (name.includes('windsurf')) return 'AI IDE (Windsurf)';
+    if (name.includes('aider')) return 'AI Coding (Aider)';
+    if (name.includes('llama')) return 'LLM Runtime (llama.cpp)';
+    if (name.includes('gpt4all')) return 'AI App (GPT4All)';
+    if (name.includes('lm.studio')) return 'AI App (LM Studio)';
+    if (name.includes('jan')) return 'AI App (Jan)';
+    if (name.includes('stable-diffusion') || name.includes('webui')) return 'Image Gen (Stable Diffusion)';
+    if (name.includes('comfyui')) return 'Image Gen (ComfyUI)';
+    if (name.includes('fooocus')) return 'Image Gen (Fooocus)';
+    if (name.includes('pinokio')) return 'AI Manager (Pinokio)';
+    if (cmd.includes('python') && cmd.includes('model')) return 'AI Model Runtime';
+    return 'AI Tool';
   }
 
   async getProcessDetails(pid) {
@@ -81,10 +107,10 @@ class ProcessManager {
       const { stdout } = await execAsync(
         `wmic process where "ProcessId=${pid}" get CommandLine,ExecutablePath /FORMAT:LIST`
       );
-      
+
       const details = {};
       const lines = stdout.split('\n');
-      
+
       for (const line of lines) {
         if (line.startsWith('CommandLine=')) {
           details.commandLine = line.replace('CommandLine=', '').trim();
@@ -93,21 +119,10 @@ class ProcessManager {
           details.executablePath = line.replace('ExecutablePath=', '').trim();
         }
       }
-      
+
       return details;
     } catch (error) {
       return {};
-    }
-  }
-
-  async getProcessInfo(pid) {
-    try {
-      const { stdout } = await execAsync(
-        `wmic process where "ProcessId=${pid}" get Name,ProcessId,WorkingSetSize,KernelModeTime,UserModeTime /FORMAT:CSV`
-      );
-      return stdout;
-    } catch (error) {
-      return null;
     }
   }
 
@@ -117,15 +132,6 @@ class ProcessManager {
       return { success: true };
     } catch (error) {
       throw new Error(`Failed to kill process ${pid}: ${error.message}`);
-    }
-  }
-
-  async startProcess(command) {
-    try {
-      const child = exec(command);
-      return { success: true, pid: child.pid };
-    } catch (error) {
-      throw new Error(`Failed to start process: ${error.message}`);
     }
   }
 
@@ -160,7 +166,7 @@ class ProcessManager {
       const { stdout } = await execAsync(
         'wmic path win32_videocontroller get name,adapterram,driverversion /FORMAT:LIST'
       );
-      
+
       const gpus = [];
       const lines = stdout.split('\n');
       let currentGpu = {};

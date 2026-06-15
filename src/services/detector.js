@@ -9,49 +9,43 @@ class AIServiceDetector {
         name: 'Ollama',
         ports: [11434],
         process: 'ollama',
-        commands: ['ollama list', 'ollama ps']
+        commands: ['ollama list']
       },
       {
         name: 'LM Studio',
         ports: [1234, 1235],
         process: 'LM Studio',
-        commands: ['lms list']
+        commands: []
       },
       {
         name: 'LocalAI',
         ports: [8080],
         process: 'local-ai',
-        commands: ['curl http://localhost:8080/v1/models']
+        commands: []
       },
       {
-        name: 'llama.cpp',
-        ports: [8080, 8081],
+        name: 'llama.cpp Server',
+        ports: [8080, 8081, 8082],
         process: 'llama-server',
-        commands: ['curl http://localhost:8080/health']
+        commands: []
       },
       {
         name: 'text-generation-webui',
         ports: [5000],
-        process: 'python.*text-generation',
-        commands: ['curl http://localhost:5000/api/v1/model']
+        process: 'python',
+        commands: []
       },
       {
         name: 'Stable Diffusion WebUI',
         ports: [7860],
-        process: 'python.*launch.py',
-        commands: ['curl http://localhost:7860/sdapi/v1/options']
+        process: 'python',
+        commands: []
       },
       {
         name: 'ComfyUI',
         ports: [8188],
-        process: 'python.*main.py',
-        commands: ['curl http://localhost:8188/system_stats']
-      },
-      {
-        name: 'Automatic1111',
-        ports: [7860],
-        process: 'python.*launch.py',
-        commands: ['curl http://localhost:7860/sdapi/v1/options']
+        process: 'python',
+        commands: []
       },
       {
         name: 'GPT4All',
@@ -62,7 +56,19 @@ class AIServiceDetector {
       {
         name: 'Jan',
         ports: [1337],
-        process: 'jan',
+        process: 'Jan',
+        commands: []
+      },
+      {
+        name: 'SiliconFlow',
+        ports: [11435],
+        process: 'siliconflow',
+        commands: []
+      },
+      {
+        name: 'KoboldCpp',
+        ports: [5001],
+        process: 'koboldcpp',
         commands: []
       }
     ];
@@ -70,7 +76,7 @@ class AIServiceDetector {
 
   async scan() {
     const detected = [];
-    
+
     for (const service of this.services) {
       const status = await this.checkService(service);
       if (status.running) {
@@ -89,47 +95,36 @@ class AIServiceDetector {
     const result = {
       running: false,
       port: null,
-      pid: null,
-      models: []
+      pid: null
     };
 
-    try {
-      // Check if process is running
-      const { stdout } = await execAsync(`tasklist /FI "IMAGENAME eq ${service.process}.exe" 2>nul || echo "not found"`);
-      if (stdout.includes(service.process)) {
-        result.running = true;
-        
-        // Try to get process ID
-        const pidMatch = stdout.match(/(\d+)/);
-        if (pidMatch) {
-          result.pid = parseInt(pidMatch[1]);
-        }
-      }
-    } catch (error) {
-      // Process not found
-    }
-
-    // Check ports
+    // Check ports first (more reliable)
     for (const port of service.ports) {
       try {
         const { stdout } = await execAsync(`netstat -an | findstr :${port} | findstr LISTENING`);
         if (stdout.trim()) {
           result.port = port;
           result.running = true;
+          break;
         }
-      } catch (error) {
-        // Port not listening
-      }
+      } catch (error) {}
     }
 
-    // Get available models if service is running
-    if (result.running && service.commands.length > 0) {
+    // Also check process
+    if (!result.running) {
       try {
-        const { stdout } = await execAsync(service.commands[0]);
-        result.modelsRaw = stdout;
-      } catch (error) {
-        // Command failed
-      }
+        const processQuery = service.process.includes('.')
+          ? service.process
+          : `${service.process}.exe`;
+        const { stdout } = await execAsync(`tasklist /FI "IMAGENAME eq ${processQuery}" 2>nul`);
+        if (stdout.includes(service.process)) {
+          result.running = true;
+          const pidMatch = stdout.match(/(\d+)/);
+          if (pidMatch) {
+            result.pid = parseInt(pidMatch[1]);
+          }
+        }
+      } catch (error) {}
     }
 
     return result;
